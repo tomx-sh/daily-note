@@ -1,0 +1,15 @@
+name: After GitHub Pages deploy
+
+on:
+  deployment_status:
+
+jobs:
+  after-pages-deploy:
+    if: >
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'github-pages'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Do something after publish
+        run: echo "GitHub Pages published successfully"
