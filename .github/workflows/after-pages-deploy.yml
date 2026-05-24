@@ -11,15 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      INSTAPAPER_URL: https://tomx-sh.github.io/daily-note/?v=12
-      INSTAPAPER_TITLE: Note quotidienne n°12
 
     steps:
+      - name: Check out deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+          fetch-depth: 0
+
+      - name: Compute note metadata
+        id: note
+        run: |
+          set -euo pipefail
+          NOTE_NUMBER="$(git rev-list --count HEAD -- index.html)"
+          echo "note_number=$NOTE_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "instapaper_url=https://tomx-sh.github.io/daily-note/?v=$NOTE_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "instapaper_title=Note quotidienne n°$NOTE_NUMBER" >> "$GITHUB_OUTPUT"
+
       - name: Publish page to Instapaper
         env:
           INSTAPAPER_USERNAME: ${{ secrets.INSTAPAPER_USERNAME }}
           INSTAPAPER_PASSWORD: ${{ secrets.INSTAPAPER_PASSWORD }}
+          INSTAPAPER_URL: ${{ steps.note.outputs.instapaper_url }}
+          INSTAPAPER_TITLE: ${{ steps.note.outputs.instapaper_title }}
         run: |
           set -euo pipefail
           response_code="$(
