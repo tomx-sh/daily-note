@@ -28,6 +28,27 @@ jobs:
           echo "instapaper_url=https://tomx-sh.github.io/daily-note/?v=$NOTE_NUMBER" >> "$GITHUB_OUTPUT"
           echo "instapaper_title=Note quotidienne n°$NOTE_NUMBER" >> "$GITHUB_OUTPUT"
 
+      - name: Wait for GitHub Pages to refresh
+        env:
+          PUBLIC_URL: ${{ steps.counter.outputs.instapaper_url }}
+        run: |
+          set -euo pipefail
+          EXPECTED_MARKER="$(python3 -c 'from pathlib import Path; import re; html = Path("index.html").read_text(encoding="utf-8"); match = re.search(r"<h1>(.*?)</h1>", html, re.S); print(match.group(1).strip() if match else "")')"
+          if [ -z "$EXPECTED_MARKER" ]; then
+            echo "Could not find page title marker in index.html" >&2
+            exit 1
+          fi
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl --silent --show-error --fail "$PUBLIC_URL" | grep -Fq "$EXPECTED_MARKER"; then
+              echo "GitHub Pages refreshed: $EXPECTED_MARKER"
+              exit 0
+            fi
+            echo "Public page not refreshed yet (attempt $attempt/10); retrying in 15s..."
+            sleep 15
+          done
+          echo "GitHub Pages did not refresh in time for: $EXPECTED_MARKER" >&2
+          exit 1
+
       - name: Publish page to Instapaper
         env:
           INSTAPAPER_USERNAME: ${{ secrets.INSTAPAPER_USERNAME }}
